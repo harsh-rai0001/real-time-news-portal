@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✨ Immersive News Portal</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f4f4;
+      --text: #333;
+      --card: #ffffff;
+      --header: #1e1e2f;
+      --button: #ff6b6b;
+      --button-hover: #ff4b4b;
+      --link: #007bff;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #f1f1f1;
+      --card: #1e1e1e;
+      --header: #000000;
+      --button: #bb86fc;
+      --button-hover: #9f6dfc;
+      --link: #82aaff;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.3;
+    }
+
+    header {
+      padding: 20px;
+      background: var(--header);
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 15px;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 15px var(--shadow);
+      backdrop-filter: blur(5px);
+    }
+
+    header h1 {
+      flex-basis: 100%;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      background: linear-gradient(90deg, #ff6b6b, #bb86fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input, select, button {
+      padding: 12px 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input {
+      width: 250px;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    input::placeholder {
+      color: rgba(255,255,255,0.7);
+    }
+
+    button {
+      background-color: var(--button);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background-color: var(--button-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    #news-container {
+      padding: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 25px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .news-card {
+      background: var(--card);
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px var(--shadow);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 10;
+    }
+
+    .news-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #ff6b6b, #bb86fc);
+    }
+
+    .news-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 12px 25px var(--shadow);
+    }
+
+    .news-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .news-card .content {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .news-card h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .news-card p {
+      font-size: 14px;
+      color: var(--text);
+      opacity: 0.8;
+      margin-bottom: 15px;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .news-card a {
+      display: inline-flex;
+      align-items: center;
+      margin-top: auto;
+      color: var(--link);
+      text-decoration: none;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+
+    .news-card a:hover {
+      color: var(--button);
+      transform: translateX(5px);
+    }
+
+    .news-card a::after {
+      content: '→';
+      margin-left: 5px;
+      transition: 0.3s;
+    }
+
+    .news-card a:hover::after {
+      transform: translateX(3px);
+    }
+
+    .loading {
+      text-align: center;
+      grid-column: 1/-1;
+      padding: 40px;
+      font-size: 1.2rem;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mic-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: white;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.3s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .mic-btn:hover {
+      background: rgba(255,255,255,0.2);
+      transform: scale(1.1);
+    }
+
+    .mic-btn.listening {
+      animation: pulse 1.5s infinite;
+      background: #ff4b4b;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .category-tag {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 2;
+    }
+
+    /* Floating particles */
+    .particle {
+      position: absolute;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        padding: 15px;
+      }
+      
+      .search-container {
+        width: 100%;
+        flex-direction: column;
+      }
+      
+      input {
+        width: 100%;
+      }
+      
+      #news-container {
+        grid-template-columns: 1fr;
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <header>
+    <h1>✨ Immersive News Portal</h1>
+    <div class="search-container">
+      <input type="text" id="search" placeholder="Search news...">
+      <button class="mic-btn" id="mic-btn" title="Voice Search">🎤</button>
+      <select id="category">
+        <option value="">All Categories</option>
+        <option value="technology">Technology</option>
+        <option value="sports">Sports</option>
+        <option value="business">Business</option>
+        <option value="entertainment">Entertainment</option>
+        <option value="health">Health</option>
+        <option value="science">Science</option>
+      </select>
+      <button onclick="getNews()">
+        <span class="search-icon">🔍</span> Search
+      </button>
+      <button onclick="toggleTheme()">
+        <span class="theme-icon">🌓</span> Toggle Theme
+      </button>
+    </div>
+  </header>
+
+  <main id="news-container">
+    <p class="loading">Loading latest news...</p>
+  </main>
+
+  <script>
+    // API Configuration
+    const apiKey = "fdb09c68220bf64338fc40fb4499aae3"; // replace with your GNews key
+    const newsContainer = document.getElementById("news-container");
+    const micBtn = document.getElementById("mic-btn");
+    let isListening = false;
+    let recognition;
+    let scene, camera, renderer, particles = [];
+
+    // Initialize 3D background
+    function init3DBackground() {
+      const canvas = document.getElementById('bg-canvas');
+      
+      // Scene
+      scene = new THREE.Scene();
+      
+      // Camera
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 30;
+      
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ 
+        canvas: canvas,
+        antialias: true,
+        alpha: true
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      
+      // Create particles
+      const particleCount = 100;
+      const particleGeometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const sizes = new Float32Array(particleCount);
+      
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 100;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+        sizes[i] = Math.random() * 2 + 1;
+      }
+      
+      particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      
+      const particleMaterial = new THREE.PointsMaterial({
+        color: 0x8888ff,
+        size: 1,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+      scene.add(particleSystem);
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        particleSystem.rotation.x += 0.0005;
+        particleSystem.rotation.y += 0.001;
+        
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    // Voice recognition setup
+    function setupVoiceRecognition() {
+      try {
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          isListening = true;
+          micBtn.classList.add('listening');
+          document.getElementById('search').placeholder = "Listening...";
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.classList.remove('listening');
+          document.getElementById('search').placeholder = "Search news...";
+        };
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          document.getElementById('search').value = transcript;
+          getNews();
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error', event.error);
+          showError('Voice recognition failed. Please try again.');
+        };
+
+      } catch (e) {
+        console.error('Speech recognition not supported', e);
+        micBtn.style.display = 'none';
+      }
+    }
+
+    // Toggle voice recognition
+    function toggleVoiceRecognition() {
+      if (!recognition) {
+        showError('Voice search not supported in your browser');
+        return;
+      }
+
+      if (isListening) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    }
+
+    // Toggle dark/light mode
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+      
+      // Update 3D background colors
+      if (scene) {
+        const isDark = document.body.classList.contains('dark');
+        scene.background = isDark ? new THREE.Color(0x121212) : new THREE.Color(0xf4f4f4);
+      }
+    }
+
+    // Check for saved theme preference
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+    }
+
+    // Fetch news from API
+    async function getNews() {
+      const search = document.getElementById("search").value || "latest";
+      const category = document.getElementById("category").value;
+      
+      let url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(search)}&lang=en&country=us&max=20&apikey=${apiKey}`;
+      
+      if (category) {
+        url = `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=us&max=20&apikey=${apiKey}`;
+      }
+
+      newsContainer.innerHTML = `<p class="loading">Loading news...</p>`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        showNews(data.articles);
+      } catch (err) {
+        console.error(err);
+        showError('Failed to load news. Please try again later.');
+      }
+    }
+
+    // Display news articles
+    function showNews(articles) {
+      if (!articles || !articles.length) {
+        newsContainer.innerHTML = `<p class="loading">No news found. Try a different search.</p>`;
+        return;
+      }
+
+      newsContainer.innerHTML = articles.map(article => `
+        <div class="news-card">
+          ${article.image ? `<img src="${article.image}" alt="${article.title}" loading="lazy">` : 
+            `<div style="height:180px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:white;">
+              <span>No Image</span>
+            </div>`}
+          <span class="category-tag">${article.source.name || 'News'}</span>
+          <div class="content">
+            <h3>${article.title}</h3>
+            <p>${article.description || 'No description available.'}</p>
+            <a href="${article.url}" target="_blank">Read full story</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Show error message
+    function showError(message) {
+      newsContainer.innerHTML = `<p class="loading" style="color:#ff6b6b">${message}</p>`;
+    }
+
+    // Initialize the app
+    document.addEventListener('DOMContentLoaded', () => {
+      init3DBackground();
+      setupVoiceRecognition();
+      getNews();
+      
+      // Event listeners
+      micBtn.addEventListener('click', toggleVoiceRecognition);
+      document.getElementById('search').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') getNews();
+      });
+      
+      document.getElementById('category').addEventListener('change', getNews);
+    });
+  </script>
+</body>
+</html>
